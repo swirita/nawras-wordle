@@ -37,19 +37,25 @@ server, including branding, offline guesses, a complete round, navigation,
 refreshes, and saved results. Its temporary builds are in ignored `.checks/`.
 CI installs Chromium automatically. `CHROME_PATH` can override the browser executable.
 
-## Create the GitHub repository and push
+## Game rules
 
-Create an empty repository on GitHub, without adding a README or other starter files.
-A repository named `YOUR-USERNAME.github.io` hosts at `/`; any other name hosts at
-`/REPOSITORY-NAME/`. Run these commands from this project folder, replacing the
-repository URL with your own:
+Each round has one five-letter answer and six valid guesses. Invalid words do not
+consume a guess. Green means the correct position, yellow means an occurrence in
+another position, and gray means no remaining occurrence. Keyboard feedback keeps
+the strongest evidence. The timer starts with the ready board and stops at final
+submission, before tile animations; background time still counts.
+
+## Deploy to GitHub Pages
+
+Repository: [swirita/nawras-wordle](https://github.com/swirita/nawras-wordle).
+Pages URL: [Nawras Wordle](https://swirita.github.io/nawras-wordle/).
+
+In **Settings → Pages**, keep **Source** set to **GitHub Actions**. Push reviewed
+changes to the default branch, `main`, to run tests, build, and deploy:
 
 ```sh
-git init
-git add .
-git commit -m "Prepare Nawras Wordle for GitHub Pages"
-git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/REPOSITORY-NAME.git
+git add <changed-project-files>
+git commit -m "Update Nawras Wordle"
 git push -u origin main
 ```
 
@@ -57,18 +63,14 @@ Include `package-lock.json`, source files, assets, tests, Vite config, and
 `.github/workflows/deploy.yml`. Generated builds, dependencies, local environment
 files, and editor clutter are ignored.
 
-## Deploy manually when ready
-
-1. In the repository, open **Settings → Pages**.
-2. Under **Build and deployment → Source**, choose **GitHub Actions**.
-3. Open **Actions → Deploy Nawras Wordle to Pages → Run workflow**.
-4. Select `main`, then click **Run workflow**.
-5. After it succeeds, open the URL shown by the `github-pages` deployment.
+You can also open **Actions → Deploy Nawras Wordle to Pages → Run workflow**,
+select `main`, and run it manually. Inspect the workflow's tests and deployment
+status, then open the URL shown by the `github-pages` deployment.
 
 The workflow uses Node 24, `npm ci`, tests, builds, and the official Pages artifact
-upload/deployment actions. It runs **only** through `workflow_dispatch`; pushing
-commits does not deploy. Keep the workflow on the default branch so the manual
-Run workflow control is available.
+upload/deployment actions. It runs on pushes to `main` and `workflow_dispatch`.
+Deployments are serialized and use the `github-pages` environment. Keep the
+workflow on the default branch so the manual Run workflow control is available.
 
 Vite derives the base from `GITHUB_REPOSITORY` (`owner/repository`). During deployment,
 `actions/configure-pages` supplies `PAGES_BASE_PATH` so repository, root, and custom
@@ -80,11 +82,11 @@ leaderboard route that is missing on static hosting.
 To preview a repository path yourself:
 
 ```sh
-npm run build -- --base=/repository-check/
-npm run preview -- --base=/repository-check/
+npm run build -- --base=/nawras-wordle/
+npm run preview -- --base=/nawras-wordle/
 ```
 
-Visit the printed origin followed by `/repository-check/`. Run a normal build again
+Visit the printed origin followed by `/nawras-wordle/`. Run a normal build again
 for root previews. See [Vite's Pages guide](https://vite.dev/guide/static-deploy.html#github-pages)
 and [GitHub's workflow documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
 
@@ -113,6 +115,9 @@ rounds ask for confirmation, and all retries are Practice attempts. Completed
 results are preserved. Next Player returns to the landing page.
 
 Abandoned rounds are not saved. Invalid stored data is handled safely.
+If stored data cannot be read or a save fails, the completed result remains in
+memory and the game reports that it could not be saved. Unreadable data is
+preserved rather than overwritten; clearing results requires explicit confirmation.
 Preparing or building the project does not change existing browser scores.
 
 Dictionary source and license are preserved in `src/data/`.

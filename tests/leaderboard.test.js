@@ -54,8 +54,9 @@ test('missing, malformed, partial, and duplicate stored records are safe', () =>
     { ...good, id: 'bad-date', completedAt: 'nope' }, { ...good, id: 'abandoned', solved: false, guessesUsed: 2 }];
   assert.deepEqual(loadResults(storage(JSON.stringify([...bad, good, good]))), [good]);
   const target = storage('{broken');
-  assert.equal(saveResult(good, [], target).saved, true);
-  assert.deepEqual(loadResults(target), [good]);
+  assert.deepEqual(saveResult(good, [], target), { results: [good], saved: false });
+  assert.equal(target.raw, '{broken');
+  assert.equal(target.writes, 0);
 });
 test('unavailable storage and quota errors retain a usable in-memory leaderboard', () => {
   const unavailable = { getItem() { throw Error('blocked'); }, setItem() { throw Error('blocked'); } };
@@ -64,6 +65,20 @@ test('unavailable storage and quota errors retain a usable in-memory leaderboard
   assert.deepEqual(saveResult(good, [], unavailable), { results: [good], saved: false });
   const quota = { getItem() { return null; }, setItem() { throw Error('quota'); } };
   assert.equal(saveResult(good, [], quota).saved, false);
+});
+
+test('failed reads never overwrite stored results or report success', () => {
+  let writes = 0;
+  const target = { getItem() { throw Error('temporarily unavailable'); }, setItem() { writes++; } };
+  const good = attempt('new');
+  assert.deepEqual(saveResult(good, [], target), { results: [good], saved: false });
+  assert.equal(writes, 0);
+  for (const raw of ['null', '{}', '42', '']) {
+    const malformed = storage(raw);
+    assert.equal(saveResult(good, [], malformed).saved, false);
+    assert.equal(malformed.raw, raw);
+    assert.equal(malformed.writes, 0);
+  }
 });
 
 test('assisted and practice attempts cannot affect competitive ranks or highlights', () => {

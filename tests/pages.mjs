@@ -12,7 +12,7 @@ const originalBase = process.env.PAGES_BASE_PATH;
 const browser = await launchBrowser();
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png' };
 try {
-  for (const repository of ['pages-test/repository-check', 'pages-test/pages-test.github.io']) {
+  for (const repository of ['pages-test/repository-check', 'pages-test/pages-test.github.io', 'swirita/nawras-wordle']) {
     process.env.GITHUB_REPOSITORY = repository;
     delete process.env.PAGES_BASE_PATH;
     const base = pagesBase();

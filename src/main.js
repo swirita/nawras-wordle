@@ -20,6 +20,8 @@ let timerInterval = null;
 let messageTimeout = null;
 
 function showScreen(id) {
+  clearTimeout(messageTimeout);
+  if (id !== 'game') stopTimer();
   screens.forEach((screen) => { screen.hidden = screen.id !== id; });
   if (id === 'landing') returnFocus.focus();
   else $(`#${id} h2`).focus();
@@ -73,6 +75,13 @@ function stopTimer() {
   clearInterval(timerInterval);
   timerInterval = null;
 }
+function syncTimer() {
+  stopTimer();
+  updateTimer();
+  if (!document.hidden && gameState.round?.status === 'playing' && !$('#game').hidden) {
+    timerInterval = setInterval(updateTimer, 250);
+  }
+}
 function setInputLocked(locked) {
   keyboard.querySelectorAll('button').forEach((button) => { button.disabled = locked; });
   board.setAttribute('aria-busy', String(locked));
@@ -107,9 +116,7 @@ function startRound(playerName, retryWord = null) {
   returnFocus = nameInput;
   showScreen('game');
   gameState.round.startedAt = Date.now();
-  updateTimer();
-  stopTimer();
-  timerInterval = setInterval(updateTimer, 250);
+  syncTimer();
 }
 function paintCurrentRow(typed = false) {
   const round = gameState.round;
@@ -310,7 +317,7 @@ window.addEventListener('beforeunload', (event) => {
     event.returnValue = '';
   }
 });
-document.addEventListener('visibilitychange', updateTimer);
+document.addEventListener('visibilitychange', syncTimer);
 window.addEventListener('storage', (event) => {
   if (event.key !== STORAGE_KEY && event.key !== null) return;
   const currentAttempt = savedAttempts.find(({ id }) => id === gameState.completedResult?.id);

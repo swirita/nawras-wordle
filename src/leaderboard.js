@@ -35,10 +35,17 @@ export const rankLabel = (result) => attemptLabel(result)
   ? `${attemptLabel(result)}${result.solved ? '' : ' · Not solved'}`
   : result.rank ? `Rank ${result.rank}` : 'Not solved';
 
+function readResults(storage) {
+  const raw = storage.getItem(STORAGE_KEY);
+  if (raw === null) return [];
+  const values = JSON.parse(raw);
+  if (!Array.isArray(values)) throw Error('Invalid leaderboard data');
+  return cleanResults(values);
+}
+
 export function loadResults(storage) {
   try {
-    const raw = (storage ?? globalThis.localStorage).getItem(STORAGE_KEY);
-    return cleanResults(raw ? JSON.parse(raw) : []);
+    return readResults(storage ?? globalThis.localStorage);
   } catch {
     return [];
   }
@@ -50,7 +57,9 @@ export function saveResult(result, fallback = [], storage) {
   const memory = cleanResults([...fallback, result]);
   try {
     const target = storage ?? globalThis.localStorage;
-    const saved = loadResults(target);
+    // A failed read is not an empty leaderboard. Preserve the stored value and
+    // keep the new attempt in memory rather than overwriting unreadable data.
+    const saved = readResults(target);
     const results = cleanResults([...saved, ...memory]);
     if (results.some(({ id }) => id === result.id) && !saved.some(({ id }) => id === result.id)) {
       target.setItem(STORAGE_KEY, JSON.stringify(results));
