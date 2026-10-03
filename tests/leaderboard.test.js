@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { STORAGE_KEY, loadResults, saveResult, rankResults, roundedSeconds, resultTime } from '../src/leaderboard.js';
 
 const attempt = (id, guessesUsed = 2, elapsedMs = 10000, solved = true, completedAt = '2026-10-03T12:00:00.000Z') =>
-  ({ id, playerName: 'Same name', word: 'STACK', solved, guessesUsed, elapsedMs, completedAt });
+  ({ id, playerName: 'Same name', word: 'STACK', solved, guessesUsed, elapsedMs, completedAt, hintsUsed: 0, isRetry: false });
 function storage(raw = null) {
   return { raw, writes: 0, getItem(key) { assert.equal(key, STORAGE_KEY); return this.raw; },
     setItem(key, value) { assert.equal(key, STORAGE_KEY); this.writes++; this.raw = value; } };
@@ -64,4 +64,31 @@ test('unavailable storage and quota errors retain a usable in-memory leaderboard
   assert.deepEqual(saveResult(good, [], unavailable), { results: [good], saved: false });
   const quota = { getItem() { return null; }, setItem() { throw Error('quota'); } };
   assert.equal(saveResult(good, [], quota).saved, false);
+});
+
+test('assisted and practice attempts cannot affect competitive ranks or highlights', () => {
+  const rows = rankResults([
+    { ...attempt('assisted', 1, 0), hintsUsed: 1 },
+    { ...attempt('practice', 1, 0), isRetry: true },
+    { ...attempt('practice-loss', 6, 0, false), hintsUsed: 3, isRetry: true },
+    attempt('first', 2, 10000), attempt('tie', 2, 10499), attempt('third', 3),
+  ]);
+  assert.deepEqual(rows.slice(0, 3).map(({ rank }) => rank), [1, 1, 3]);
+  assert.ok(rows.slice(3).every(({ rank, topFive }) => rank === null && !topFive));
+});
+
+test('legacy records default to unassisted first attempts and new fields persist', () => {
+  const legacy = attempt('legacy');
+  delete legacy.hintsUsed;
+  delete legacy.isRetry;
+  assert.deepEqual(loadResults(storage(JSON.stringify([legacy]))), [attempt('legacy')]);
+  const target = storage();
+  const practice = { ...attempt('practice'), hintsUsed: 3, isRetry: true };
+  saveResult(practice, [], target);
+  saveResult(practice, [], target);
+  assert.deepEqual(loadResults(target), [practice]);
+  assert.equal(target.writes, 1);
+  for (const fields of [{ hintsUsed: 4 }, { hintsUsed: -1 }, { hintsUsed: 1.5 }, { isRetry: 'yes' }]) {
+    assert.deepEqual(loadResults(storage(JSON.stringify([{ ...practice, ...fields }]))), []);
+  }
 });

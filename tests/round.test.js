@@ -1,10 +1,37 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { evaluateGuess, updateKeyFeedback, elapsedMs, formatTime } from '../src/round.js';
+import { evaluateGuess, updateKeyFeedback, elapsedMs, formatTime, eligibleHintPositions, revealHint } from '../src/round.js';
 import { WORDS } from '../src/words.js';
 
 const C = 'correct', P = 'present', A = 'absent';
+test('hints reveal individual positions, exclude greens, and stop at three without changing guesses or time', () => {
+  const round = { word: { answer: 'APPLE' }, status: 'playing', revealing: false,
+    hintsUsed: 0, hintPositions: [], guesses: [], currentGuess: 'AL', startedAt: 1000, completedAt: null };
+  assert.equal(revealHint(round, () => .25), true);
+  assert.deepEqual(round.hintPositions, [1]); // Only the first P.
+  assert.ok(eligibleHintPositions(round).includes(2));
+  round.guesses.push({ word: 'ALLEY', feedback: evaluateGuess('ALLEY', 'APPLE') });
+  assert.deepEqual(eligibleHintPositions(round), [2, 3, 4]);
+  assert.equal(revealHint(round, () => 0), true);
+  assert.equal(revealHint(round, () => 0), true);
+  assert.equal(revealHint(round), false);
+  assert.equal(round.hintsUsed, 3);
+  assert.deepEqual(round.hintPositions, [1, 2, 3]);
+  assert.equal(round.guesses.length, 1);
+  assert.equal(round.currentGuess, 'AL');
+  assert.equal(elapsedMs(round, 6000), 5000);
+});
+test('hints lock during reveals, at round end, and when every position is green', () => {
+  const round = { status: 'playing', revealing: true, hintsUsed: 0, hintPositions: [], guesses: [] };
+  assert.equal(revealHint(round), false);
+  round.revealing = false;
+  round.status = 'won';
+  assert.equal(revealHint(round), false);
+  round.status = 'playing';
+  round.guesses = [{ feedback: [C, C, C, C, C] }];
+  assert.equal(revealHint(round), false);
+});
 test('exact matches reserve occurrences before assigning yellow', () => {
   assert.deepEqual(evaluateGuess('GEESE', 'GEEKS'), [C, C, C, P, A]);
   assert.deepEqual(evaluateGuess('ARRAY', 'MAJOR'), [P, P, A, A, A]);

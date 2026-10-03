@@ -1,5 +1,20 @@
 import { RULES } from './words.js';
 
+export function eligibleHintPositions(round) {
+  if (round.status !== 'playing' || round.revealing || round.hintsUsed >= 3) return [];
+  return Array.from({ length: RULES.wordLength }, (_, index) => index).filter((index) =>
+    !round.hintPositions.includes(index)
+    && !round.guesses.some(({ feedback }) => feedback[index] === 'correct'));
+}
+
+export function revealHint(round, random = Math.random) {
+  const eligible = eligibleHintPositions(round);
+  if (!eligible.length) return false;
+  round.hintPositions.push(eligible[Math.floor(random() * eligible.length)]);
+  round.hintsUsed += 1;
+  return true;
+}
+
 export function evaluateGuess(guess, answer) {
   const feedback = Array(RULES.wordLength).fill('absent');
   const remaining = {};

@@ -30,6 +30,11 @@
           <img class="brand game-brand" src="%BASE_URL%assets/nawras-name.png" alt="NawrasEdu" width="2172" height="724" />
           <p id="category-hint" class="category-hint"></p>
           <p class="timer" aria-label="Elapsed time"><span id="elapsed-time">0:00</span></p>
+          <div class="round-tools">
+            <button id="hint-button" class="quiet-button" type="button">Hint (0/3)</button>
+            <div id="hint-strip" class="hint-strip" role="status" aria-live="polite" aria-label="Revealed hint positions">_ _ _ _ _</div>
+            <button id="retry-button" class="quiet-button" type="button">Retry</button>
+          </div>
           <div id="board" class="board" role="table" aria-label="Word board: six guesses of five letters"></div>
           <p id="game-message" class="game-message" role="status" aria-live="polite"></p>
           <div id="keyboard" class="keyboard" role="group" aria-label="Letter keyboard"></div>
@@ -40,6 +45,8 @@
         <div class="leaderboard-content">
           <h2 id="leaderboard-title" tabindex="-1">Leaderboard</h2>
           <div id="full-leaderboard" class="leaderboard-list" role="region" aria-label="All saved attempts" tabindex="0"></div>
+          <button id="clear-leaderboard" class="quiet-button clear-leaderboard" type="button">Clear Leaderboard</button>
+          <p id="clear-message" class="save-message" role="status"></p>
         </div>
       </section>
       <section id="result" class="screen result" aria-labelledby="result-title" hidden>
@@ -52,9 +59,11 @@
             <div><dt>Elapsed time</dt><dd id="result-time"></dd></div>
           </dl>
           <p id="result-rank" class="result-rank"></p>
+          <span id="result-badge" class="attempt-badge" hidden></span>
           <p id="save-message" class="save-message" role="status"></p>
           <div id="result-leaderboard" class="leaderboard-list" role="region" aria-label="Leaderboard including your attempt" tabindex="0"></div>
           <button id="next-player" class="start-button" type="button">Next Player</button>
+          <button id="result-retry" class="quiet-button result-retry" type="button">Retry</button>
         </div>
       </section>
     </main>

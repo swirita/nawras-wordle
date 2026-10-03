@@ -1,4 +1,4 @@
-import { rankResults, resultTime } from './leaderboard.js';
+import { rankResults, resultTime, rankLabel } from './leaderboard.js';
 
 export function renderLeaderboard(host, results, currentId = null) {
   host.replaceChildren();
@@ -30,7 +30,7 @@ export function renderLeaderboard(host, results, currentId = null) {
     row.classList.toggle('top-five', result.topFive);
     row.classList.toggle('current-attempt', result.id === currentId);
     if (result.id === currentId) row.setAttribute('aria-current', 'true');
-    for (const value of [result.rank ?? 'Not solved', result.playerName, result.guessesUsed, resultTime(result.elapsedMs)]) {
+    for (const value of [result.rank ?? rankLabel(result), result.playerName, result.guessesUsed, resultTime(result.elapsedMs)]) {
       row.insertCell().textContent = String(value);
     }
   }

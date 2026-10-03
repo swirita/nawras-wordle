@@ -140,6 +140,7 @@ try {
     dispatchEvent(new StorageEvent('storage', { key, newValue: '{broken' }));
   }, STORAGE_KEY);
   assert.ok(await page.getByText('No results yet', { exact: true }).isVisible());
+  assert.ok(await page.locator('#clear-leaderboard').isDisabled());
   assert.deepEqual(errors, []);
   console.log('PASS: empty/malformed storage, ties and rank-five highlights, plain-text names, sticky headers, long-list current-ID scroll, duplicate names, mobile summary/footer, win/loss saves, idempotence, abandonment, refresh persistence.');
   // Check persistence through a refresh of the actual production bundle too.
@@ -151,8 +152,35 @@ try {
     await open();
     assert.equal(await page.locator('#full-leaderboard tbody tr').count(), fixtures.length);
     assert.equal(await page.locator('#full-leaderboard .top-five').count(), 6);
+    page.once('dialog', (dialog) => {
+      assert.equal(dialog.message(), 'Clear all leaderboard results? This cannot be undone.');
+      return dialog.dismiss();
+    });
+    await page.locator('#clear-leaderboard').click();
+    assert.equal((await saved()).length, fixtures.length);
+    await page.evaluate(() => { localStorage.setItem('unrelated-preference', 'keep'); });
+    // A failed storage deletion must retain visible results and report failure.
+    await page.evaluate(() => {
+      window.originalRemoveItem = Storage.prototype.removeItem;
+      Storage.prototype.removeItem = () => { throw Error('blocked'); };
+    });
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.locator('#clear-leaderboard').click();
+    assert.equal(await page.locator('#full-leaderboard tbody tr').count(), fixtures.length);
+    assert.equal(await page.locator('#clear-message').innerText(), 'Leaderboard could not be cleared on this browser.');
+    await page.evaluate(() => { Storage.prototype.removeItem = window.originalRemoveItem; });
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.locator('#clear-leaderboard').focus();
+    await page.keyboard.press('Enter');
+    assert.ok(await page.getByText('No results yet', { exact: true }).isVisible());
+    assert.ok(await page.locator('#clear-leaderboard').isDisabled());
+    assert.equal((await saved()).length, 0);
+    assert.equal(await page.evaluate(() => localStorage.getItem('unrelated-preference')), 'keep');
+    await page.reload();
+    await open();
+    assert.ok(await page.getByText('No results yet', { exact: true }).isVisible());
     assert.deepEqual(errors, []);
-    console.log('PASS: production leaderboard and refresh persistence.');
+    console.log('PASS: production leaderboard, clear confirmation/cancel, keyboard activation, storage failure, unrelated data preservation and refresh persistence.');
   } finally { await new Promise((resolve) => production.httpServer.close(resolve)); }
 } finally {
   await browser.close();

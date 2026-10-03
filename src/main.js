@@ -1,9 +1,9 @@
 import './style.css';
 import { RULES, selectWord } from './words.js';
 import { isValidWord } from './dictionary.js';
-import { evaluateGuess, updateKeyFeedback, elapsedMs, formatTime } from './round.js';
+import { evaluateGuess, updateKeyFeedback, elapsedMs, formatTime, eligibleHintPositions, revealHint } from './round.js';
 import { gameState } from './state.js';
-import { STORAGE_KEY, loadResults, saveResult, resultTime } from './leaderboard.js';
+import { STORAGE_KEY, loadResults, saveResult, resultTime, attemptLabel, rankLabel } from './leaderboard.js';
 import { renderLeaderboard, scrollToAttempt } from './leaderboard-view.js';
 import { startParticles } from './particles.js';
 
@@ -76,13 +76,23 @@ function stopTimer() {
 function setInputLocked(locked) {
   keyboard.querySelectorAll('button').forEach((button) => { button.disabled = locked; });
   board.setAttribute('aria-busy', String(locked));
+  updateRoundTools();
 }
-function startRound(playerName) {
+function updateRoundTools() {
+  const round = gameState.round;
+  $('#hint-button').textContent = `Hint (${round.hintsUsed}/3)`;
+  $('#hint-button').disabled = !eligibleHintPositions(round).length;
+  $('#retry-button').disabled = round.revealing || round.status !== 'playing';
+  $('#hint-strip').textContent = [...round.word.answer].map((letter, index) =>
+    round.hintPositions.includes(index) ? letter : '_').join(' ');
+}
+function startRound(playerName, retryWord = null) {
   const playerKey = playerName.toLocaleLowerCase('en');
   if (!assignments.has(playerKey)) assignments.set(playerKey, selectWord());
   gameState.round = {
     id: crypto.randomUUID(),
-    playerName, word: assignments.get(playerKey), guesses: [], currentGuess: '',
+    playerName, word: retryWord ?? assignments.get(playerKey), guesses: [], currentGuess: '',
+    hintsUsed: 0, hintPositions: [], isRetry: Boolean(retryWord),
     keys: {}, status: 'playing', revealing: false,
     startedAt: Date.now(), completedAt: null, completionTimeMs: null,
   };
@@ -91,7 +101,7 @@ function startRound(playerName) {
   renderKeyboard();
   setInputLocked(false);
   $('#game [data-back]').disabled = false;
-  $('#category-hint').textContent = `Hint: ${gameState.round.word.category}`;
+  $('#category-hint').textContent = `Hint: ${gameState.round.word.category}${retryWord ? ' · Practice' : ''}`;
   clearTimeout(messageTimeout);
   $('#game-message').textContent = '';
   returnFocus = nameInput;
@@ -138,11 +148,13 @@ async function submitGuess() {
       id: round.id, playerName: round.playerName, answer: round.word.answer, category: round.word.category,
       won, guessesUsed: round.guesses.length, elapsedMs: round.completionTimeMs,
       completedAt: round.completedAt,
+      hintsUsed: round.hintsUsed, isRetry: round.isRetry,
     });
     const stored = saveResult({
       id: round.id, playerName: round.playerName, word: round.word.answer, solved: won,
       guessesUsed: round.guesses.length, elapsedMs: round.completionTimeMs,
       completedAt: new Date(round.completedAt).toISOString(),
+      hintsUsed: round.hintsUsed, isRetry: round.isRetry,
     }, savedAttempts);
     savedAttempts = stored.results;
     $('#save-message').textContent = stored.saved ? '' : 'This result could not be saved on this browser.';
@@ -166,6 +178,7 @@ async function submitGuess() {
   });
   round.revealing = false;
   round.currentGuess = '';
+  updateRoundTools();
   if (round.status === 'playing') {
     setInputLocked(false);
     $('#game-title').focus();
@@ -185,7 +198,9 @@ async function submitGuess() {
   $('#result-time').textContent = resultTime(round.completionTimeMs);
   const ranked = renderLeaderboard($('#result-leaderboard'), savedAttempts, round.id);
   const current = ranked.find(({ id }) => id === round.id);
-  $('#result-rank').textContent = won ? `Rank ${current.rank}` : 'Not solved';
+  $('#result-rank').textContent = rankLabel(current);
+  $('#result-badge').textContent = attemptLabel(current);
+  $('#result-badge').hidden = !attemptLabel(current);
   showScreen('result');
   requestAnimationFrame(() => {
     if (!$('#result').hidden && gameState.completedResult?.id === round.id) scrollToAttempt($('#result-leaderboard'), round.id);
@@ -216,10 +231,42 @@ $('#name-form').addEventListener('submit', (event) => {
   startRound(playerName);
 });
 nameInput.addEventListener('input', () => nameError(''));
+$('#hint-button').addEventListener('click', () => {
+  if (revealHint(gameState.round)) updateRoundTools();
+});
+function retryRound() {
+  const round = gameState.round;
+  if (!round || round.revealing) return;
+  if (round.status === 'playing') {
+    if (!window.confirm('Restart this word?')) return;
+    round.status = 'abandoned';
+  }
+  startRound(round.playerName, round.word);
+}
+$('#retry-button').addEventListener('click', retryRound);
+$('#result-retry').addEventListener('click', retryRound);
+function renderFullLeaderboard() {
+  renderLeaderboard($('#full-leaderboard'), savedAttempts);
+  $('#clear-leaderboard').disabled = savedAttempts.length === 0;
+}
 $('#leaderboard-button').addEventListener('click', () => {
   returnFocus = $('#leaderboard-button');
-  renderLeaderboard($('#full-leaderboard'), savedAttempts);
+  $('#clear-message').textContent = '';
+  renderFullLeaderboard();
   showScreen('leaderboard');
+});
+$('#clear-leaderboard').addEventListener('click', () => {
+  if (!savedAttempts.length || !window.confirm('Clear all leaderboard results? This cannot be undone.')) return;
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    $('#clear-message').textContent = 'Leaderboard could not be cleared on this browser.';
+    return;
+  }
+  savedAttempts = [];
+  renderFullLeaderboard();
+  $('#clear-message').textContent = 'Leaderboard cleared.';
+  $('#leaderboard-title').focus();
 });
 document.querySelectorAll('[data-back]').forEach((button) => {
   button.addEventListener('click', () => {
@@ -253,7 +300,7 @@ document.addEventListener('keydown', (event) => {
     return;
   }
   if (!/^[a-z]$/i.test(event.key) && !['Enter', 'Backspace'].includes(event.key)) return;
-  if (event.key === 'Enter' && event.target.closest('[data-back]')) return;
+  if (event.key === 'Enter' && event.target.closest('button:not([data-key])')) return;
   event.preventDefault();
   if (!event.repeat) handleKey(event.key);
 });
@@ -270,12 +317,13 @@ window.addEventListener('storage', (event) => {
   savedAttempts = loadResults();
   // Keep this browser tab's just-completed attempt visible even if another tab
   // removes or corrupts storage while its final tiles are still revealing.
-  if (currentAttempt && !savedAttempts.some(({ id }) => id === currentAttempt.id)) savedAttempts.push(currentAttempt);
-  if (!$('#leaderboard').hidden) renderLeaderboard($('#full-leaderboard'), savedAttempts);
+  if (currentAttempt && gameState.round?.revealing && event.newValue !== null
+    && !savedAttempts.some(({ id }) => id === currentAttempt.id)) savedAttempts.push(currentAttempt);
+  if (!$('#leaderboard').hidden) renderFullLeaderboard();
   if (!$('#result').hidden && gameState.completedResult) {
     const ranked = renderLeaderboard($('#result-leaderboard'), savedAttempts, gameState.completedResult.id);
     const current = ranked.find(({ id }) => id === gameState.completedResult.id);
-    $('#result-rank').textContent = current?.rank ? `Rank ${current.rank}` : 'Not solved';
+    $('#result-rank').textContent = current ? rankLabel(current) : 'Result removed from leaderboard';
     scrollToAttempt($('#result-leaderboard'), gameState.completedResult.id);
   }
 });

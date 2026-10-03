@@ -31,7 +31,7 @@ npm run test:browser
 npm run test:pages
 ```
 
-`test:browser` checks gameplay and leaderboard behavior; build first.
+`test:browser` checks gameplay, hints, retries, and leaderboard behavior; build first.
 `test:pages` builds and tests both `/repository-check/` and `/` on a strict static
 server, including branding, offline guesses, a complete round, navigation,
 refreshes, and saved results. Its temporary builds are in ignored `.checks/`.
@@ -95,10 +95,24 @@ browser profile and site origin (protocol, host, and port), and are **not shared
 across devices**. Existing localhost scores will **not** automatically appear on
 GitHub Pages. Changing domains or protocols also gives the site different storage;
 paths on the same origin share storage. Clearing browser site data clears results.
+The leaderboard's Clear Leaderboard button asks for confirmation, then removes
+all saved game results from this browser without clearing other site data.
 
 Each completed attempt saves once by unique ID, preserving original milliseconds.
 Ranking uses guesses, then rounded whole seconds; tied scores share competition
-ranks. Abandoned rounds are not saved. Invalid stored data is handled safely.
+ranks. Only solved first attempts with zero hints receive ranks and top-five
+highlights. Assisted and Practice attempts appear below competitive results;
+unsuccessful attempts also show Not solved. Results save `hintsUsed` and `isRetry`;
+older records default to zero hints and a first attempt.
+
+Hint reveals up to three individual positions in a separate strip, skipping
+positions already hinted or green. It consumes no guess and leaves the timer
+running; submitting the answer is still required to win. Retry keeps the name,
+answer, and category while resetting the board, hints, keyboard, and timer. Active
+rounds ask for confirmation, and all retries are Practice attempts. Completed
+results are preserved. Next Player returns to the landing page.
+
+Abandoned rounds are not saved. Invalid stored data is handled safely.
 Preparing or building the project does not change existing browser scores.
 
 Dictionary source and license are preserved in `src/data/`.
