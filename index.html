@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#eef8fc" />
+    <link rel="icon" type="image/png" href="%BASE_URL%assets/nawras-small.png" />
+    <title>Nawras Wordle</title>
+  </head>
+  <body>
+    <canvas id="particles" aria-hidden="true"></canvas>
+    <main id="app">
+      <section id="landing" class="screen landing" aria-labelledby="landing-title">
+        <button id="leaderboard-button" class="quiet-button leaderboard-button" type="button">Leaderboard</button>
+        <div class="landing-content">
+          <img class="brand" src="%BASE_URL%assets/nawras-name.png" alt="NawrasEdu" width="2172" height="724" />
+          <h1 id="landing-title" class="wordmark"><span>NAWRAS</span><span>WORDLE</span></h1>
+          <form id="name-form" novalidate>
+            <label for="player-name">Enter your name</label>
+            <input id="player-name" name="playerName" type="text" maxlength="24" autocomplete="nickname" required aria-describedby="name-error" />
+            <p id="name-error" class="validation" aria-live="polite"></p>
+            <button class="start-button" type="submit">START</button>
+          </form>
+        </div>
+      </section>
+      <section id="game" class="screen game" aria-labelledby="game-title" hidden>
+        <button class="quiet-button back-button" type="button" data-back>← Back</button>
+        <div class="game-content">
+          <h2 id="game-title" class="sr-only" tabindex="-1">Nawras Wordle</h2>
+          <img class="brand game-brand" src="%BASE_URL%assets/nawras-name.png" alt="NawrasEdu" width="2172" height="724" />
+          <p id="category-hint" class="category-hint"></p>
+          <p class="timer" aria-label="Elapsed time"><span id="elapsed-time">0:00</span></p>
+          <div id="board" class="board" role="table" aria-label="Word board: six guesses of five letters"></div>
+          <p id="game-message" class="game-message" role="status" aria-live="polite"></p>
+          <div id="keyboard" class="keyboard" role="group" aria-label="Letter keyboard"></div>
+        </div>
+      </section>
+      <section id="leaderboard" class="screen leaderboard" aria-labelledby="leaderboard-title" hidden>
+        <button class="quiet-button back-button" type="button" data-back>← Back</button>
+        <div class="leaderboard-content">
+          <h2 id="leaderboard-title" tabindex="-1">Leaderboard</h2>
+          <div id="full-leaderboard" class="leaderboard-list" role="region" aria-label="All saved attempts" tabindex="0"></div>
+        </div>
+      </section>
+      <section id="result" class="screen result" aria-labelledby="result-title" hidden>
+        <div class="result-content">
+          <img class="brand" src="%BASE_URL%assets/nawras-name.png" alt="NawrasEdu" width="2172" height="724" />
+          <h2 id="result-title" tabindex="-1">Solved!</h2>
+          <p id="result-answer" class="result-answer"></p>
+          <dl class="result-details">
+            <div><dt>Guesses used</dt><dd id="result-guesses"></dd></div>
+            <div><dt>Elapsed time</dt><dd id="result-time"></dd></div>
+          </dl>
+          <p id="result-rank" class="result-rank"></p>
+          <p id="save-message" class="save-message" role="status"></p>
+          <div id="result-leaderboard" class="leaderboard-list" role="region" aria-label="Leaderboard including your attempt" tabindex="0"></div>
+          <button id="next-player" class="start-button" type="button">Next Player</button>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
