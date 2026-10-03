@@ -12,6 +12,27 @@ const screens = [...document.querySelectorAll('.screen')];
 const nameInput = $('#player-name');
 const board = $('#board');
 const keyboard = $('#keyboard');
+const fullscreenButton = $('#fullscreen-button');
+let fullscreenPending = false;
+async function toggleFullscreen() {
+  if (fullscreenPending) return;
+  fullscreenPending = true;
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  } catch {
+    fullscreenButton.textContent = 'Fullscreen unavailable';
+  } finally {
+    fullscreenPending = false;
+  }
+}
+fullscreenButton.hidden = !document.fullscreenEnabled;
+fullscreenButton.addEventListener('click', () => { void toggleFullscreen(); });
+document.addEventListener('fullscreenchange', () => {
+  const active = Boolean(document.fullscreenElement);
+  fullscreenButton.textContent = active ? 'Exit fullscreen (F)' : 'Fullscreen (F)';
+  fullscreenButton.setAttribute('aria-pressed', String(active));
+});
 const assignments = new Map();
 let savedAttempts = loadResults();
 const motion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -300,7 +321,18 @@ keyboard.addEventListener('click', (event) => {
   if (button) handleKey(button.dataset.key);
 });
 document.addEventListener('keydown', (event) => {
-  if ($('#game').hidden || event.isComposing) return;
+  if (event.isComposing || event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
+  if (event.key.toLowerCase() === 'f' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && document.fullscreenEnabled) {
+    event.preventDefault();
+    if (!event.repeat) void toggleFullscreen();
+    return;
+  }
+  if ($('#game').hidden) return;
+  if (event.key.toLowerCase() === 'f' && event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    event.preventDefault();
+    if (!event.repeat) handleKey('F');
+    return;
+  }
   if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) {
     // Modified Enter must not trigger a keyboard button's native click.
     if (event.key === 'Enter') event.preventDefault();

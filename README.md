@@ -39,6 +39,10 @@ CI installs Chromium automatically. `CHROME_PATH` can override the browser execu
 
 ## Game rules
 
+Press **F** to enter or exit fullscreen, or use the **Fullscreen (F)** button.
+Escape also exits fullscreen. The shortcut is ignored while entering your name.
+During a round, enter the letter F with **Shift+F** or the on-screen F key.
+
 Each round has one five-letter answer and six valid guesses. Invalid words do not
 consume a guess. Green means the correct position, yellow means an occurrence in
 another position, and gray means no remaining occurrence. Keyboard feedback keeps
