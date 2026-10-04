@@ -113,8 +113,11 @@ older records default to zero hints and a first attempt.
 
 Hint reveals up to three individual positions in a separate strip, skipping
 positions already hinted or green. It consumes no guess and leaves the timer
-running; submitting the answer is still required to win. Retry keeps the name,
-answer, and category while resetting the board, hints, keyboard, and timer. Active
+running; submitting the answer is still required to win. Every new round randomly
+selects a unique answer using cryptographic randomness, excluding the immediately
+previous answer. Names and leaderboard data never determine answers. Retry keeps
+the name and selects a fresh answer and category while resetting the board, hints,
+keyboard, timer, and result state. Active
 rounds ask for confirmation, and all retries are Practice attempts. Completed
 results are preserved. Next Player returns to the landing page.
 

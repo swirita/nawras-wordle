@@ -33,7 +33,8 @@ document.addEventListener('fullscreenchange', () => {
   fullscreenButton.textContent = active ? 'Exit fullscreen (F)' : 'Fullscreen (F)';
   fullscreenButton.setAttribute('aria-pressed', String(active));
 });
-const assignments = new Map();
+// Survives navigation and leaderboard clearing, even when the round is discarded.
+let previousAnswer = null;
 let savedAttempts = loadResults();
 const motion = matchMedia('(prefers-reduced-motion: reduce)');
 let returnFocus = nameInput;
@@ -116,13 +117,14 @@ function updateRoundTools() {
   $('#hint-strip').textContent = [...round.word.answer].map((letter, index) =>
     round.hintPositions.includes(index) ? letter : '_').join(' ');
 }
-function startRound(playerName, retryWord = null) {
-  const playerKey = playerName.toLocaleLowerCase('en');
-  if (!assignments.has(playerKey)) assignments.set(playerKey, selectWord());
+function startRound(playerName, isRetry = false) {
+  const word = selectWord(previousAnswer);
+  previousAnswer = word.answer;
+  gameState.completedResult = null;
   gameState.round = {
     id: crypto.randomUUID(),
-    playerName, word: retryWord ?? assignments.get(playerKey), guesses: [], currentGuess: '',
-    hintsUsed: 0, hintPositions: [], isRetry: Boolean(retryWord),
+    playerName, word, guesses: [], currentGuess: '',
+    hintsUsed: 0, hintPositions: [], isRetry,
     keys: {}, status: 'playing', revealing: false,
     startedAt: Date.now(), completedAt: null, completionTimeMs: null,
   };
@@ -131,7 +133,7 @@ function startRound(playerName, retryWord = null) {
   renderKeyboard();
   setInputLocked(false);
   $('#game [data-back]').disabled = false;
-  $('#category-hint').textContent = `Hint: ${gameState.round.word.category}${retryWord ? ' · Practice' : ''}`;
+  $('#category-hint').textContent = `Hint: ${word.category}${isRetry ? ' · Practice' : ''}`;
   clearTimeout(messageTimeout);
   $('#game-message').textContent = '';
   returnFocus = nameInput;
@@ -266,10 +268,10 @@ function retryRound() {
   const round = gameState.round;
   if (!round || round.revealing) return;
   if (round.status === 'playing') {
-    if (!window.confirm('Restart this word?')) return;
+    if (!window.confirm('Start a new round?')) return;
     round.status = 'abandoned';
   }
-  startRound(round.playerName, round.word);
+  startRound(round.playerName, true);
 }
 $('#retry-button').addEventListener('click', retryRound);
 $('#result-retry').addEventListener('click', retryRound);

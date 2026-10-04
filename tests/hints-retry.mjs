@@ -1,4 +1,4 @@
-import { launchBrowser } from './browser.js';
+import { launchBrowser, stubWordRandom } from './browser.js';
 import { createServer } from 'vite';
 import assert from 'node:assert/strict';
 import { STORAGE_KEY } from '../src/leaderboard.js';
@@ -14,11 +14,11 @@ try {
   await page.goto(`http://localhost:${server.httpServer.address().port}`);
   await page.evaluate(async () => {
     window.state = (await import('/src/state.js')).gameState;
-    Math.random = () => 22.1 / 24; // APPLE
     const now = Date.now;
     window.offset = 0;
     Date.now = () => now() + window.offset;
   });
+  await page.evaluate(stubWordRandom, 22); // APPLE
   const state = () => page.evaluate(() => JSON.parse(JSON.stringify(window.state)));
   const saved = () => page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '[]'), STORAGE_KEY);
   const guess = async (word) => {
@@ -45,15 +45,19 @@ try {
   assert.equal((await state()).round.completedAt, null);
   assert.ok((await page.locator('#elapsed-time').innerText()).startsWith('1:'));
   const old = (await state()).round;
-  page.once('dialog', (dialog) => { assert.equal(dialog.message(), 'Restart this word?'); return dialog.dismiss(); });
+  page.once('dialog', (dialog) => { assert.equal(dialog.message(), 'Start a new round?'); return dialog.dismiss(); });
   await page.locator('#retry-button').click();
   assert.equal((await state()).round.id, old.id);
+  await page.evaluate(stubWordRandom, 0);
   page.once('dialog', (dialog) => dialog.accept());
   await page.locator('#retry-button').focus();
   await page.keyboard.press('Enter');
   const fresh = (await state()).round;
   assert.notEqual(fresh.id, old.id);
-  assert.deepEqual(fresh.word, old.word);
+  assert.notEqual(fresh.word.answer, old.word.answer);
+  assert.equal(await page.locator('#category-hint').innerText(), `Hint: ${fresh.word.category} · Practice`);
+  assert.equal((await state()).completedResult, null);
+  assert.equal(await page.evaluate(() => window.wordRandomCalls), 1);
   assert.equal(fresh.playerName, old.playerName);
   assert.equal(fresh.isRetry, true);
   assert.equal(fresh.hintsUsed, 0);
@@ -74,7 +78,7 @@ try {
   assert.ok(await page.locator('#retry-button').isDisabled());
   await page.waitForFunction(() => !window.state.round.revealing);
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await guess('APPLE');
+  await guess(fresh.word.answer);
   await page.waitForSelector('#result:not([hidden])');
   assert.equal(await page.locator('#result-badge').innerText(), 'Practice');
   assert.equal(await page.locator('#result-rank').innerText(), 'Practice');
@@ -82,7 +86,8 @@ try {
   const completed = (await saved())[0];
   await page.locator('#result-retry').click();
   assert.deepEqual((await saved())[0], completed);
-  assert.equal((await state()).completedResult.id, completed.id);
+  assert.equal((await state()).completedResult, null);
+  assert.notEqual((await state()).round.word.answer, completed.word);
   for (let i = 0; i < 6; i++) await guess('HOUSE');
   await page.waitForSelector('#result:not([hidden])');
   assert.equal(await page.locator('#result-rank').innerText(), 'Practice · Not solved');

@@ -1,4 +1,4 @@
-import { launchBrowser } from './browser.js';
+import { launchBrowser, stubWordRandom } from './browser.js';
 import { createServer, preview } from 'vite';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -23,8 +23,8 @@ try {
     const originalNow = Date.now;
     window.timeOffset = 0;
     Date.now = () => originalNow() + window.timeOffset;
-    Math.random = () => 0; // STACK for deterministic browser scenarios.
   });
+  await page.evaluate(stubWordRandom, 0);
   const input = page.getByLabel('Enter your name', { exact: true });
   const state = () => page.evaluate(() => JSON.parse(JSON.stringify(window.testState)));
   const start = async (name) => {
@@ -109,9 +109,10 @@ try {
   assert.equal((await state()).completedResult, null);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await start('Sixth guess winner');
+  const winningAnswer = (await state()).round.word.answer;
   for (let i = 0; i < 5; i++) { await type('HOUSE'); await submit(); }
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await type('STACK');
+  await type(winningAnswer);
   await page.getByRole('button', { name: 'Enter', exact: true }).click();
   const finalSubmission = await state();
   assert.equal(finalSubmission.round.status, 'won');
@@ -125,7 +126,7 @@ try {
   assert.equal(await page.locator('#result-title').innerText(), 'Solved!');
   assert.equal(await page.locator('#result-guesses').innerText(), '6');
   assert.equal((await state()).completedResult.elapsedMs, frozenTime);
-  assert.equal(await page.locator('#result-answer').innerText(), 'STACK');
+  assert.equal(await page.locator('#result-answer').innerText(), winningAnswer);
   await next();
   assert.ok((await state()).completedResult.won);
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -144,7 +145,7 @@ try {
   assert.equal((await state()).completedResult.guessesUsed, 6);
   assert.equal(await page.evaluate(() => window.celebrated), false);
   await next();
-  await page.evaluate(() => { Math.random = () => 22.1 / 24; }); // APPLE
+  await page.evaluate(stubWordRandom, 21); // APPLE, with the preceding STACK excluded.
   await start('Repeated letters');
   for (const letter of 'ALLEY') await page.getByRole('button', { name: letter, exact: true }).click();
   await page.getByRole('button', { name: 'Enter', exact: true }).click();

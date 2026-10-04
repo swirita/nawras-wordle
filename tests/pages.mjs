@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 import { build } from 'vite';
-import { launchBrowser } from './browser.js';
+import { launchBrowser, stubWordRandom } from './browser.js';
 import { pagesBase } from '../scripts/pages-base.js';
 import { STORAGE_KEY } from '../src/leaderboard.js';
 
@@ -40,7 +40,7 @@ try {
       const failures = [];
       page.on('pageerror', (error) => failures.push(error.message));
       page.on('response', (response) => { if (response.status() >= 400) failures.push(`${response.status()} ${response.url()}`); });
-      await page.addInitScript(() => { Math.random = () => 0; });
+      await page.addInitScript(stubWordRandom, 0);
       const url = `http://127.0.0.1:${server.address().port}${base}`;
       assert.equal((await page.goto(url)).status(), 200);
       assert.equal(await page.title(), 'Nawras Wordle');

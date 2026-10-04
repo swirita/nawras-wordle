@@ -1,4 +1,4 @@
-import { launchBrowser } from './browser.js';
+import { launchBrowser, stubWordRandom } from './browser.js';
 import { createServer, preview } from 'vite';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -53,7 +53,7 @@ try {
   assert.deepEqual(lastIds, ['loss-new', 'loss-old']);
   await page.screenshot({ path: '.checks/leaderboard-desktop.png' });
   await page.getByRole('button', { name: '← Back', exact: true }).click();
-  await page.evaluate(() => { Math.random = () => 0; });
+  await page.evaluate(stubWordRandom, 0);
   const start = async () => {
     await page.getByLabel('Enter your name', { exact: true }).fill('Twin');
     await page.getByLabel('Enter your name', { exact: true }).press('Enter');
