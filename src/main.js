@@ -117,14 +117,14 @@ function updateRoundTools() {
   $('#hint-strip').textContent = [...round.word.answer].map((letter, index) =>
     round.hintPositions.includes(index) ? letter : '_').join(' ');
 }
-function startRound(playerName, isRetry = false) {
+function startRound(playerName) {
   const word = selectWord(previousAnswer);
   previousAnswer = word.answer;
   gameState.completedResult = null;
   gameState.round = {
     id: crypto.randomUUID(),
     playerName, word, guesses: [], currentGuess: '',
-    hintsUsed: 0, hintPositions: [], isRetry,
+    hintsUsed: 0, hintPositions: [],
     keys: {}, status: 'playing', revealing: false,
     startedAt: Date.now(), completedAt: null, completionTimeMs: null,
   };
@@ -133,7 +133,7 @@ function startRound(playerName, isRetry = false) {
   renderKeyboard();
   setInputLocked(false);
   $('#game [data-back]').disabled = false;
-  $('#category-hint').textContent = `Hint: ${word.category}${isRetry ? ' · Practice' : ''}`;
+  $('#category-hint').textContent = `Hint: ${word.category}`;
   clearTimeout(messageTimeout);
   $('#game-message').textContent = '';
   returnFocus = nameInput;
@@ -178,13 +178,13 @@ async function submitGuess() {
       id: round.id, playerName: round.playerName, answer: round.word.answer, category: round.word.category,
       won, guessesUsed: round.guesses.length, elapsedMs: round.completionTimeMs,
       completedAt: round.completedAt,
-      hintsUsed: round.hintsUsed, isRetry: round.isRetry,
+      hintsUsed: round.hintsUsed,
     });
     const stored = saveResult({
       id: round.id, playerName: round.playerName, word: round.word.answer, solved: won,
       guessesUsed: round.guesses.length, elapsedMs: round.completionTimeMs,
       completedAt: new Date(round.completedAt).toISOString(),
-      hintsUsed: round.hintsUsed, isRetry: round.isRetry,
+      hintsUsed: round.hintsUsed,
     }, savedAttempts);
     savedAttempts = stored.results;
     $('#save-message').textContent = stored.saved ? '' : 'This result could not be saved on this browser.';
@@ -271,7 +271,7 @@ function retryRound() {
     if (!window.confirm('Start a new round?')) return;
     round.status = 'abandoned';
   }
-  startRound(round.playerName, true);
+  startRound(round.playerName);
 }
 $('#retry-button').addEventListener('click', retryRound);
 $('#result-retry').addEventListener('click', retryRound);

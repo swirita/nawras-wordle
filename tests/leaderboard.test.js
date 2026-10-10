@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { STORAGE_KEY, loadResults, saveResult, rankResults, roundedSeconds, resultTime } from '../src/leaderboard.js';
 
 const attempt = (id, guessesUsed = 2, elapsedMs = 10000, solved = true, completedAt = '2026-10-03T12:00:00.000Z') =>
-  ({ id, playerName: 'Same name', word: 'STACK', solved, guessesUsed, elapsedMs, completedAt, hintsUsed: 0, isRetry: false });
+  ({ id, playerName: 'Same name', word: 'STACK', solved, guessesUsed, elapsedMs, completedAt, hintsUsed: 0 });
 function storage(raw = null) {
   return { raw, writes: 0, getItem(key) { assert.equal(key, STORAGE_KEY); return this.raw; },
     setItem(key, value) { assert.equal(key, STORAGE_KEY); this.writes++; this.raw = value; } };
@@ -81,29 +81,34 @@ test('failed reads never overwrite stored results or report success', () => {
   }
 });
 
-test('assisted and practice attempts cannot affect competitive ranks or highlights', () => {
+test('assisted rounds rank normally and share the existing ties and highlights', () => {
   const rows = rankResults([
     { ...attempt('assisted', 1, 0), hintsUsed: 1 },
-    { ...attempt('practice', 1, 0), isRetry: true },
-    { ...attempt('practice-loss', 6, 0, false), hintsUsed: 3, isRetry: true },
+    attempt('unassisted', 1, 0),
+    { ...attempt('assisted-loss', 6, 0, false), hintsUsed: 3 },
     attempt('first', 2, 10000), attempt('tie', 2, 10499), attempt('third', 3),
   ]);
-  assert.deepEqual(rows.slice(0, 3).map(({ rank }) => rank), [1, 1, 3]);
-  assert.ok(rows.slice(3).every(({ rank, topFive }) => rank === null && !topFive));
+  assert.deepEqual(rows.map(({ rank }) => rank), [1, 1, 3, 3, 5, null]);
+  assert.ok(rows.slice(0, 5).every(({ topFive }) => topFive));
+  assert.equal(rows[5].topFive, false);
 });
 
-test('legacy records default to unassisted first attempts and new fields persist', () => {
+test('legacy records retain known hints and all rounds become eligible without rewriting storage', () => {
   const legacy = attempt('legacy');
   delete legacy.hintsUsed;
-  delete legacy.isRetry;
   assert.deepEqual(loadResults(storage(JSON.stringify([legacy]))), [attempt('legacy')]);
   const target = storage();
-  const practice = { ...attempt('practice'), hintsUsed: 3, isRetry: true };
-  saveResult(practice, [], target);
-  saveResult(practice, [], target);
-  assert.deepEqual(loadResults(target), [practice]);
+  const assisted = { ...attempt('assisted'), hintsUsed: 3 };
+  const oldRetry = { ...assisted, isRetry: true };
+  const oldStorage = storage(JSON.stringify([oldRetry]));
+  assert.deepEqual(loadResults(oldStorage), [assisted]);
+  assert.equal(oldStorage.writes, 0);
+  assert.equal(rankResults(loadResults(oldStorage))[0].rank, 1);
+  saveResult(assisted, [], target);
+  saveResult(assisted, [], target);
+  assert.deepEqual(loadResults(target), [assisted]);
   assert.equal(target.writes, 1);
-  for (const fields of [{ hintsUsed: 4 }, { hintsUsed: -1 }, { hintsUsed: 1.5 }, { isRetry: 'yes' }]) {
-    assert.deepEqual(loadResults(storage(JSON.stringify([{ ...practice, ...fields }]))), []);
+  for (const fields of [{ hintsUsed: 4 }, { hintsUsed: -1 }, { hintsUsed: 1.5 }]) {
+    assert.deepEqual(loadResults(storage(JSON.stringify([{ ...assisted, ...fields }]))), []);
   }
 });

@@ -104,12 +104,14 @@ paths on the same origin share storage. Clearing browser site data clears result
 The leaderboard's Clear Leaderboard button asks for confirmation, then removes
 all saved game results from this browser without clearing other site data.
 
-Each completed attempt saves once by unique ID, preserving original milliseconds.
+Each completed round (a full try, not an individual guess) saves once by unique
+ID, including retries and repeated player names, preserving original milliseconds.
 Ranking uses guesses, then rounded whole seconds; tied scores share competition
-ranks. Only solved first attempts with zero hints receive ranks and top-five
-highlights. Assisted and Practice attempts appear below competitive results;
-unsuccessful attempts also show Not solved. Results save `hintsUsed` and `isRetry`;
-older records default to zero hints and a first attempt.
+ranks. All solved rounds receive ranks and top-five highlights, including rounds
+with hints. Using a hint adds an Assisted badge beside the player name in both
+leaderboard views, without a score penalty. Unsuccessful rounds show Not solved.
+Results save `hintsUsed`, keeping the badge after refresh. Existing records and
+known hint usage are retained; older records without hint data default to zero.
 
 Hint reveals up to three individual positions in a separate strip, skipping
 positions already hinted or green. It consumes no guess and leaves the timer
@@ -118,7 +120,7 @@ selects a unique answer using cryptographic randomness, excluding the immediatel
 previous answer. Names and leaderboard data never determine answers. Retry keeps
 the name and selects a fresh answer and category while resetting the board, hints,
 keyboard, timer, and result state. Active
-rounds ask for confirmation, and all retries are Practice attempts. Completed
+rounds ask for confirmation. Completed
 results are preserved. Next Player returns to the landing page.
 
 Abandoned rounds are not saved. Invalid stored data is handled safely.

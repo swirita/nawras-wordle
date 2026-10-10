@@ -125,6 +125,7 @@ h2 { margin: 0; font-size: clamp(28px, 6vw, 36px); letter-spacing: -1px; }
 .leaderboard-table th:nth-child(2) { width: 43%; }
 .leaderboard-table th:nth-child(3), .leaderboard-table th:nth-child(4) { width: 18%; }
 .leaderboard-table td { padding: 14px 12px; border-bottom: 1px solid #d7e9f0; overflow-wrap: anywhere; }
+.assisted-badge { display: inline-block; padding: 2px 5px; border: 1px solid #8fbdd0; border-radius: 4px; background: #edf7fb; color: #365971; font-size: 11px; font-weight: 600; line-height: 1.4; white-space: nowrap; vertical-align: middle; }
 .leaderboard-table tr:last-child td { border-bottom: 0; }
 .leaderboard-table th:nth-child(n+3), .leaderboard-table td:nth-child(n+3) { text-align: center; }
 .leaderboard-table .top-five { background: linear-gradient(90deg, #fff0bb8f, #d9f7fb75); }

@@ -56,7 +56,6 @@ try {
   assert.equal(await calls(), 2);
   assert.notEqual(retry.id, first.id);
   assert.equal(retry.playerName, first.playerName);
-  assert.equal(retry.isRetry, true);
   assert.deepEqual(retry.guesses, []);
   assert.deepEqual(retry.hintPositions, []);
   assert.deepEqual(retry.keys, {});
@@ -67,14 +66,13 @@ try {
   assert.equal(retry.revealing, false);
   assert.equal((await state()).completedResult, null);
   assert.equal(await page.locator('#elapsed-time').innerText(), '0:00');
-  assert.equal(await page.locator('#category-hint').innerText(), `Hint: ${retry.word.category} · Practice`);
+  assert.equal(await page.locator('#category-hint').innerText(), `Hint: ${retry.word.category}`);
 
   await leave();
   await page.evaluate(stubWordRandom, 10);
   await start();
   const restarted = (await state()).round;
   assert.deepEqual(restarted.word, WORDS.filter(({ answer }) => answer !== retry.word.answer)[10]);
-  assert.equal(restarted.isRetry, false);
   assert.equal(await calls(), 1);
   await guess(restarted.word.answer);
   await page.waitForSelector('#result:not([hidden])');

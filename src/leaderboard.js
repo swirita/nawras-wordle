@@ -11,7 +11,6 @@ function validResult(value) {
     && typeof value.word === 'string' && /^[A-Z]{5}$/.test(value.word)
     && typeof value.solved === 'boolean'
     && (value.hintsUsed === undefined || (Number.isInteger(value.hintsUsed) && value.hintsUsed >= 0 && value.hintsUsed <= 3))
-    && (value.isRetry === undefined || typeof value.isRetry === 'boolean')
     && Number.isInteger(value.guessesUsed) && value.guessesUsed >= 1 && value.guessesUsed <= 6
     && (value.solved || value.guessesUsed === 6)
     && Number.isFinite(value.elapsedMs) && value.elapsedMs >= 0 && value.elapsedMs <= Number.MAX_SAFE_INTEGER
@@ -25,15 +24,12 @@ function cleanResults(values) {
     if (!validResult(value) || seen.has(value.id)) return false;
     seen.add(value.id);
     return true;
-  }).map(({ id, playerName, word, solved, guessesUsed, elapsedMs, completedAt, hintsUsed = 0, isRetry = false }) =>
-    ({ id, playerName, word, solved, guessesUsed, elapsedMs, completedAt, hintsUsed, isRetry }));
+  }).map(({ id, playerName, word, solved, guessesUsed, elapsedMs, completedAt, hintsUsed = 0 }) =>
+    ({ id, playerName, word, solved, guessesUsed, elapsedMs, completedAt, hintsUsed }));
 }
 
-export const attemptLabel = (result) => result.isRetry ? 'Practice' : result.hintsUsed > 0 ? 'Assisted' : '';
-export const competitive = (result) => result.solved && !attemptLabel(result);
-export const rankLabel = (result) => attemptLabel(result)
-  ? `${attemptLabel(result)}${result.solved ? '' : ' · Not solved'}`
-  : result.rank ? `Rank ${result.rank}` : 'Not solved';
+export const attemptLabel = (result) => result.hintsUsed > 0 ? 'Assisted' : '';
+export const rankLabel = (result) => result.rank ? `Rank ${result.rank}` : 'Not solved';
 
 function readResults(storage) {
   const raw = storage.getItem(STORAGE_KEY);
@@ -71,7 +67,7 @@ export function saveResult(result, fallback = [], storage) {
 }
 
 export function rankResults(results) {
-  const successes = results.filter(competitive).sort((a, b) =>
+  const successes = results.filter((result) => result.solved).sort((a, b) =>
     a.guessesUsed - b.guessesUsed
     || roundedSeconds(a.elapsedMs) - roundedSeconds(b.elapsedMs)
     || Date.parse(a.completedAt) - Date.parse(b.completedAt));
@@ -82,7 +78,7 @@ export function rankResults(results) {
       || roundedSeconds(previous.elapsedMs) !== roundedSeconds(result.elapsedMs)) rank = index + 1;
     return { ...result, rank, topFive: rank <= 5 };
   });
-  const unsuccessful = results.filter((result) => !competitive(result))
+  const unsuccessful = results.filter((result) => !result.solved)
     .sort((a, b) => Date.parse(b.completedAt) - Date.parse(a.completedAt))
     .map((result) => ({ ...result, rank: null, topFive: false }));
   return [...ranked, ...unsuccessful];

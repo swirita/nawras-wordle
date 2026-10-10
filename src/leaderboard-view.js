@@ -1,4 +1,4 @@
-import { rankResults, resultTime, rankLabel } from './leaderboard.js';
+import { rankResults, resultTime, rankLabel, attemptLabel } from './leaderboard.js';
 
 export function renderLeaderboard(host, results, currentId = null) {
   host.replaceChildren();
@@ -32,6 +32,12 @@ export function renderLeaderboard(host, results, currentId = null) {
     if (result.id === currentId) row.setAttribute('aria-current', 'true');
     for (const value of [result.rank ?? rankLabel(result), result.playerName, result.guessesUsed, resultTime(result.elapsedMs)]) {
       row.insertCell().textContent = String(value);
+    }
+    if (attemptLabel(result)) {
+      const badge = document.createElement('span');
+      badge.className = 'assisted-badge';
+      badge.textContent = attemptLabel(result);
+      row.cells[1].append(' ', badge);
     }
   }
   host.append(table);
